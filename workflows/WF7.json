@@ -1,0 +1,396 @@
+{
+  "name": "WF7 - דרישות תשלום (אאורה)",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## WF7 – דרישות תשלום\nכל שעה: מחפש בטבלת PaymentRequests רשומות בסטטוס 'חדש' → מחשב מע\"מ 18% וסה\"כ → בונה מסמך HTML בעברית → שומר בגוגל דרייב → שולח לרוכש במייל עם המסמך המצורף → מעדכן Status='נשלח' + PdfUrl.\n\n**לפני הפעלה:** Airtable (חיפוש + עדכון, טבלת PaymentRequests), Google Drive, Gmail.\nRequestNumber = שדה Autonumber ב-Airtable (מספור רץ בלי התנגשויות).\nליצירת PDF: בדרייב → פתיחה ב-Google Docs → File → Download → PDF.",
+        "height": 320,
+        "width": 480
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "66fca4b0-403b-4e77-9fe1-f34bd9408ed8",
+      "name": "הסבר"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 60
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        400
+      ],
+      "id": "09b2c4d7-236d-48db-87a7-3914ca62516a",
+      "name": "כל דקה"
+    },
+    {
+      "parameters": {
+        "authentication": "airtableOAuth2Api",
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "appXXXXXXXXXXXXXX",
+          "mode": "list",
+          "cachedResultName": "ERP"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblXXXXXXXXXXXXXX",
+          "mode": "list",
+          "cachedResultName": "PaymentRequests"
+        },
+        "filterByFormula": "{Status}=\"חדש\"",
+        "returnAll": false,
+        "limit": 5,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        224,
+        400
+      ],
+      "id": "9e829d20-c418-40e7-aadf-a37b06ff3fda",
+      "name": "דרישות חדשות"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "df8068d2-881f-45ad-b73a-0d8f747151f7",
+              "name": "id",
+              "value": "={{ $json.id }}",
+              "type": "string"
+            },
+            {
+              "id": "aee0084f-0d18-4699-8877-e4dda8064037",
+              "name": "RequestNumber",
+              "value": "={{ ($json.fields || $json).RequestNumber }}",
+              "type": "string"
+            },
+            {
+              "id": "c4667d95-37bb-4ee0-b504-d3e9dac2d674",
+              "name": "BuyerName",
+              "value": "={{ ($json.fields || $json).BuyerName }}",
+              "type": "string"
+            },
+            {
+              "id": "e588104a-39d5-4161-a2bc-b19210c36d05",
+              "name": "BuyerEmail",
+              "value": "={{ ($json.fields || $json).BuyerEmail }}",
+              "type": "string"
+            },
+            {
+              "id": "44f54b96-0590-488e-b9b6-1427c9aa4c64",
+              "name": "ApartmentId",
+              "value": "={{ (() => { const f = $json.fields || $json; const k = Object.keys(f).find(k => k.toLowerCase().includes('apartment')); return k ? String(f[k]) : ''; })() }}",
+              "type": "string"
+            },
+            {
+              "id": "5838b046-ab9a-4375-957e-0914a9212fde",
+              "name": "Amount",
+              "value": "={{ Number(($json.fields || $json).Amount) }}",
+              "type": "number"
+            },
+            {
+              "id": "e5a295d8-53bf-446e-a3fa-8226c2b4cc23",
+              "name": "VatAmount",
+              "value": "={{ Math.round(Number(($json.fields || $json).Amount) * 0.18) }}",
+              "type": "number"
+            },
+            {
+              "id": "ce4934ae-80e7-4ae4-b825-3d5eca0c28c7",
+              "name": "Total",
+              "value": "={{ Math.round(Number(($json.fields || $json).Amount) * 1.18) }}",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        448,
+        400
+      ],
+      "id": "19bbcd91-e3c0-4cb9-8eeb-88f49c7b18ad",
+      "name": "חישוב מע\"מ"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ffbabc2d-c96d-45e7-8e08-7d685dd33855",
+              "name": "html",
+              "value": "=<!DOCTYPE html><html dir=\"rtl\" lang=\"he\"><head><meta charset=\"utf-8\"><title>דרישת תשלום {{ $json.RequestNumber }}</title>\n<style>body{font-family:Arial,sans-serif;max-width:720px;margin:40px auto;color:#1b2a4a}h1{color:#1b2a4a;border-bottom:4px solid #f2b705;padding-bottom:8px}table{width:100%;border-collapse:collapse;margin-top:20px}td{padding:10px;border-bottom:1px solid #ddd}td.n{text-align:left}.tot td{font-weight:bold;font-size:18px;background:#f6f6f6}.note{margin-top:30px;font-size:13px;color:#555}</style></head>\n<body><h1>אאורה ישראל – דרישת תשלום</h1>\n<p><b>מספר דרישה:</b> {{ $json.RequestNumber }}<br><b>תאריך:</b> {{ $now.setZone('Asia/Jerusalem').toFormat('dd/MM/yyyy') }}</p>\n<p><b>לכבוד:</b> {{ $json.BuyerName }}<br><b>דירה:</b> {{ $json.ApartmentId }}</p>\n<table><tr><td>סכום לפני מע\"מ</td><td class=\"n\">{{ $json.Amount.toLocaleString('he-IL') }} ₪</td></tr>\n<tr><td>מע\"מ 18%</td><td class=\"n\">{{ $json.VatAmount.toLocaleString('he-IL') }} ₪</td></tr>\n<tr class=\"tot\"><td>סה\"כ לתשלום</td><td class=\"n\">{{ $json.Total.toLocaleString('he-IL') }} ₪</td></tr></table>\n<p class=\"note\">התשלום יבוצע באמצעות שובר מפנקס השוברים של הפרויקט, לחשבון הליווי בבנק המלווה בלבד. אין להעביר כסף לחשבון אחר.<br>\nמסמך לדוגמה לצורך פרויקט לימודי – אינו חשבונית מס.</p></body></html>",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        672,
+        400
+      ],
+      "id": "fe6fc6bd-2a99-4788-8f16-e0378445b5d5",
+      "name": "בניית מסמך HTML"
+    },
+    {
+      "parameters": {
+        "operation": "toText",
+        "sourceProperty": "html",
+        "options": {
+          "fileName": "=דרישת-תשלום-{{ $('חישוב מע\"מ').item.json.RequestNumber }}.html"
+        }
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        880,
+        400
+      ],
+      "id": "ea9619de-6bd7-48df-830f-2dcca32d8b38",
+      "name": "המרה לקובץ"
+    },
+    {
+      "parameters": {
+        "name": "=דרישת-תשלום-{{ $('חישוב מע\"מ').item.json.RequestNumber }}.html",
+        "driveId": {
+          "__rl": true,
+          "value": "My Drive",
+          "mode": "list",
+          "cachedResultName": "My Drive",
+          "cachedResultUrl": "https://drive.google.com/drive/my-drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "root",
+          "mode": "list",
+          "cachedResultName": "/ (Root folder)",
+          "cachedResultUrl": "https://drive.google.com/drive"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        1120,
+        288
+      ],
+      "id": "14a10728-ec4e-410b-aca4-4be0fd975d9b",
+      "name": "שמירה בדרייב"
+    },
+    {
+      "parameters": {
+        "authentication": "airtableOAuth2Api",
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "value": "appXXXXXXXXXXXXXX",
+          "mode": "list",
+          "cachedResultName": "ERP"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblXXXXXXXXXXXXXX",
+          "mode": "list",
+          "cachedResultName": "PaymentRequests"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $('חישוב מע\"מ').item.json.id }}",
+            "VatAmount": "={{ $('חישוב מע\"מ').item.json.VatAmount }}",
+            "PdfUrl": "=https://drive.google.com/file/d/{{ $json.id }}/view",
+            "Status": "נשלח"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "VatAmount",
+              "displayName": "VatAmount",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "PdfUrl",
+              "displayName": "PdfUrl",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": true,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "typecast": true
+        }
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        1344,
+        288
+      ],
+      "id": "d7200681-24cf-47f7-b524-e9de656edbff",
+      "name": "עדכון בטבלה"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('חישוב מע\"מ').item.json.BuyerEmail }}",
+        "subject": "=דרישת תשלום {{ $('חישוב מע\"מ').item.json.RequestNumber }} – אאורה ישראל",
+        "emailType": "text",
+        "message": "=שלום {{ $('חישוב מע\"מ').item.json.BuyerName }},\n\nמצורפת דרישת תשלום מספר {{ $('חישוב מע\"מ').item.json.RequestNumber }} עבור דירה {{ $('חישוב מע\"מ').item.json.ApartmentId }}.\n\nסכום לפני מע\"מ: {{ $('חישוב מע\"מ').item.json.Amount.toLocaleString('he-IL') }} ₪\nמע\"מ (18%): {{ $('חישוב מע\"מ').item.json.VatAmount.toLocaleString('he-IL') }} ₪\nסה\"כ לתשלום: {{ $('חישוב מע\"מ').item.json.Total.toLocaleString('he-IL') }} ₪\n\nהתשלום מתבצע אך ורק באמצעות שובר מפנקס השוברים, לחשבון הליווי של הפרויקט.\nלשאלות אפשר להשיב למייל הזה.\n\nבברכה,\nצוות שירות הרוכשים, אאורה ישראל",
+        "options": {
+          "appendAttribution": false,
+          "attachmentsUi": {
+            "attachmentsBinary": [
+              {}
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1120,
+        528
+      ],
+      "id": "97513ad2-23b9-4d08-b879-0319211fbb94",
+      "name": "שליחה לרוכש",
+      "webhookId": "9c82eea1-551a-498b-bf33-f88eb4204a7f"
+    }
+  ],
+  "connections": {
+    "כל דקה": {
+      "main": [
+        [
+          {
+            "node": "דרישות חדשות",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "דרישות חדשות": {
+      "main": [
+        [
+          {
+            "node": "חישוב מע\"מ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "חישוב מע\"מ": {
+      "main": [
+        [
+          {
+            "node": "בניית מסמך HTML",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "בניית מסמך HTML": {
+      "main": [
+        [
+          {
+            "node": "המרה לקובץ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "המרה לקובץ": {
+      "main": [
+        [
+          {
+            "node": "שמירה בדרייב",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "שליחה לרוכש",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "שמירה בדרייב": {
+      "main": [
+        [
+          {
+            "node": "עדכון בטבלה",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "nodeGroups": []
+}

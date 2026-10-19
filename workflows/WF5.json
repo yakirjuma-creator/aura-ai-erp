@@ -1,0 +1,192 @@
+{
+  "name": "WF5 - דירות למאגר ידע (אאורה)",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## WF5 – טבלת הדירות → מאגר ידע\nקורא את כל הדירות מטבלת Apartments ב-Airtable, הופך כל דירה למשפט בעברית ושומר במאגר.\n\nלפני הרצה: בצומת Airtable בוחרים credential, בסיס וטבלה (לבחור מחדש מהרשימה!). בצומת OpenAI Embeddings בוחרים credential.\nמריצים שוב אחרי כל שינוי בטבלה או אתחול של n8n.",
+        "height": 200,
+        "width": 440
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        16,
+        -96
+      ],
+      "id": "9e0e5391-d273-4c7c-892f-65fbd549e073",
+      "name": "הסבר"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        48,
+        208
+      ],
+      "id": "d0444906-e373-4f71-bd12-f0d5930dc30b",
+      "name": "הרצה ידנית"
+    },
+    {
+      "parameters": {
+        "authentication": "airtableOAuth2Api",
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "appXXXXXXXXXXXXXX",
+          "mode": "list",
+          "cachedResultName": "ERP"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblXXXXXXXXXXXXXX",
+          "mode": "list",
+          "cachedResultName": "Apartments"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        256,
+        208
+      ],
+      "id": "f5d340c2-e485-4f54-87ad-354fd613c548",
+      "name": "קריאת דירות"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "5827094d-02c4-42ca-bb7b-95e0daa0a34e",
+              "name": "text",
+              "value": "=דירה {{ $json.ApartmentId }} בפרויקט {{ $json.Project }}, {{ $json.Building }}, קומה {{ $json.Floor }}. {{ $json.Rooms }} חדרים, {{ $json.Size }} מ\"ר. מחיר: {{ $json.Price }} ש\"ח כולל מע\"מ. סטטוס: {{ $json.Status }}. {{ $json.Description }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        496,
+        208
+      ],
+      "id": "aa303f83-e9a5-43cd-84e9-1d37a725f0c4",
+      "name": "בניית משפט לכל דירה"
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "memoryKey": {
+          "__rl": true,
+          "value": "aura_apartments",
+          "mode": "list",
+          "cachedResultName": "aura_apartments"
+        },
+        "clearStore": true
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreInMemory",
+      "typeVersion": 1.3,
+      "position": [
+        896,
+        208
+      ],
+      "id": "216f76fd-9c6c-4b20-9e69-76787284855d",
+      "name": "מאגר וקטורי"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        896,
+        432
+      ],
+      "id": "a626830b-5f7d-442a-9557-b8721ff41f7d",
+      "name": "OpenAI Embeddings"
+    },
+    {
+      "parameters": {
+        "jsonMode": "expressionData",
+        "jsonData": "={{ $json.text }}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "typeVersion": 1.1,
+      "position": [
+        1120,
+        432
+      ],
+      "id": "0bc6ec1e-4213-4fb8-8d24-bb5189e79356",
+      "name": "טעינת טקסט"
+    }
+  ],
+  "connections": {
+    "הרצה ידנית": {
+      "main": [
+        [
+          {
+            "node": "קריאת דירות",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "קריאת דירות": {
+      "main": [
+        [
+          {
+            "node": "בניית משפט לכל דירה",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "בניית משפט לכל דירה": {
+      "main": [
+        [
+          {
+            "node": "מאגר וקטורי",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Embeddings": {
+      "ai_embedding": [
+        [
+          {
+            "node": "מאגר וקטורי",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "טעינת טקסט": {
+      "ai_document": [
+        [
+          {
+            "node": "מאגר וקטורי",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "nodeGroups": []
+}

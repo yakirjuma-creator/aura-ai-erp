@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>אאורה AI-ERP – לוח ניהול מכירות</title>
+<style>
+  :root{--navy:#1b2a4a;--gold:#f2b705;--bg:#f4f5f8;--panel:#fff;--ink:#1c2024;--dim:#6b7280;--line:#e4e7ec;--ok:#12805c;--warn:#b54708;--bad:#b42318}
+  *{box-sizing:border-box}
+  body{margin:0;font:14px/1.5 system-ui,"Segoe UI",Arial,sans-serif;background:var(--bg);color:var(--ink);display:flex;min-height:100vh}
+  nav{width:220px;flex:none;background:var(--navy);color:#fff;padding:18px 12px}
+  nav h1{font-size:17px;margin:0 6px 4px}
+  nav h1 span{color:var(--gold)}
+  nav small{display:block;margin:0 6px 18px;color:#c9d1e3;font-size:12px}
+  nav button{display:block;width:100%;text-align:start;padding:9px 12px;margin-bottom:3px;border:0;border-radius:8px;background:none;color:#e6eaf3;font:inherit;cursor:pointer}
+  nav button:hover{background:#ffffff14}
+  nav button.on{background:var(--gold);color:var(--navy);font-weight:600}
+  main{flex:1;padding:20px 24px;overflow:auto}
+  header{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
+  header .grow{flex:1}
+  input,select,textarea{font:inherit;padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink)}
+  button{font:inherit;padding:7px 12px;border:1px solid var(--line);border-radius:8px;background:#fff;cursor:pointer}
+  .primary{background:var(--navy);border-color:var(--navy);color:#fff}
+  .ltr{direction:ltr}
+  .err{color:var(--bad);white-space:pre-wrap}
+  .err:not(:empty){background:#fef3f2;border:1px solid #fecdca;border-radius:8px;padding:8px 12px;margin-bottom:12px}
+  .muted{color:var(--dim);font-size:13px}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:16px}
+  .kpi{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px;border-top:4px solid var(--gold)}
+  .kpi b{display:block;font-size:26px;color:var(--navy)}
+  .kpi span{color:var(--dim);font-size:13px}
+  .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px;overflow:auto}
+  .card h3{margin:0 0 10px;font-size:15px;color:var(--navy)}
+  .bar{display:flex;align-items:center;gap:8px;margin:6px 0}
+  .bar label{width:110px;font-size:13px}
+  .bar div{height:14px;border-radius:7px;background:var(--navy)}
+  .bar em{font-style:normal;font-size:12px;color:var(--dim)}
+  table{border-collapse:collapse;width:100%}
+  th,td{padding:8px 10px;text-align:start;border-bottom:1px solid var(--line);white-space:nowrap;max-width:280px;overflow:hidden;text-overflow:ellipsis}
+  th{font-size:12px;color:var(--dim);position:sticky;top:0;background:#fff}
+  .chip{display:inline-block;padding:1px 9px;border-radius:10px;font-size:12px;background:#eef1f6}
+  .chip.free{background:#e7f6ee;color:var(--ok)}.chip.res{background:#fff4e5;color:var(--warn)}.chip.sold{background:#fdecea;color:var(--bad)}
+  dialog{border:0;border-radius:12px;padding:20px 22px;min-width:min(460px,92vw);box-shadow:0 12px 40px #0003}
+  dialog label{display:block;margin-bottom:10px}
+  dialog label span{display:block;font-size:12px;color:var(--dim)}
+  dialog input,dialog select,dialog textarea{width:100%}
+  @media (max-width:760px){body{flex-direction:column}nav{width:auto}}
+</style>
+</head>
+<body>
+<nav id="nav">
+  <h1>אאורה <span>AI-ERP</span></h1>
+  <small>לוח ניהול מכירות ורוכשים</small>
+  <button data-v="home" class="on">לוח מחוונים</button>
+  <button data-v="Leads">מתעניינים</button>
+  <button data-v="Apartments">מלאי דירות</button>
+  <button data-v="PaymentRequests">דרישות תשלום</button>
+  <button data-v="Tasks">משימות</button>
+</nav>
+<main>
+  <header>
+    <strong id="title">לוח מחוונים</strong>
+    <input id="q" placeholder="חיפוש..." size="18" hidden>
+    <button id="new" class="primary" hidden>+ רשומה חדשה</button>
+    <span class="grow"></span>
+    <input id="pat" type="password" placeholder="Airtable Token" size="16" class="ltr">
+    <input id="base" placeholder="Base ID (app...)" size="16" class="ltr">
+    <button id="connect" class="primary">התחבר</button>
+  </header>
+  <div id="error" class="err"></div>
+  <p id="hint" class="muted">הזינו טוקן גישה אישי של Airtable ומזהה בסיס. הם נשמרים רק בדפדפן שלכם ולא בקובץ.</p>
+  <section id="view"></section>
+</main>
+<dialog id="dlg"><form id="form" method="dialog"></form></dialog>
+<script>
+const API='https://api.airtable.com/v0';
+const HE={Name:'שם',Email:'אימייל',Phone:'טלפון',Project:'פרויקט',Rooms:'חדרים',Budget:'תקציב',Status:'סטטוס',Created:'נוצר',GmailThreadId:'שרשור מייל',
+ApartmentId:'מס׳ דירה',Building:'בניין',Floor:'קומה',Size:'מ"ר',Price:'מחיר',Description:'תיאור',RequestNumber:'מס׳ דרישה',BuyerName:'רוכש',BuyerEmail:'מייל רוכש',
+Amount:'סכום לפני מע"מ',VatAmount:'מע"מ',Total:'סה"כ',PdfUrl:'מסמך',Title:'משימה',RelatedTo:'קשור ל'};
+const TITLES={home:'לוח מחוונים',Leads:'מתעניינים',Apartments:'מלאי דירות',PaymentRequests:'דרישות תשלום',Tasks:'משימות'};
+const RO=['createdTime','formula','autoNumber','rollup','count','lookup','multipleLookupValues','lastModifiedTime'];
+const $=id=>document.getElementById(id);
+let pat='',base='',meta={},data={},view='home';
+try{pat=localStorage.aura_pat||'';base=localStorage.aura_base||''}catch(e){}
+$('pat').value=pat;$('base').value=base;
+const show=e=>$('error').textContent=e?'שגיאה: '+(e.message||e):'';
+const he=s=>HE[s]||s;
+const val=v=>v==null?'':Array.isArray(v)?v.map(val).join(', '):typeof v==='object'?(v.name??v.url??JSON.stringify(v)):String(v);
+const ils=n=>isNaN(Number(n))||n===''?'':'₪'+Number(n).toLocaleString('he-IL');
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+async function api(p,o={}){const r=await fetch(API+p,{...o,headers:{Authorization:'Bearer '+pat,'Content-Type':'application/json'}});const j=await r.json();if(!r.ok)throw new Error(j.error?.message||j.error?.type||r.status);return j}
+async function all(t){let out=[],off;do{const q=new URLSearchParams({pageSize:100});if(off)q.set('offset',off);const j=await api(`/${base}/${encodeURIComponent(t)}?${q}`);out.push(...j.records);off=j.offset}while(off);return out}
+async function connect(){pat=$('pat').value.trim();base=$('base').value.trim();try{localStorage.aura_pat=pat;localStorage.aura_base=base}catch(e){}
+  show();$('hint').hidden=true;
+  try{const m=await api(`/meta/bases/${base}/tables`);m.tables.forEach(t=>meta[t.name]=t);
+    for(const t of Object.keys(TITLES).filter(k=>k!=='home'))data[t]=meta[t]?await all(t):[];
+    render()}catch(e){show(e)}}
+const F=(r,k)=>val(r.fields[k]).trim();
+function home(){
+  const L=data.Leads||[],A=(data.Apartments||[]).filter(r=>F(r,'ApartmentId')),P=data.PaymentRequests||[],T=data.Tasks||[];
+  const free=A.filter(r=>F(r,'Status')==='פנויה'),sent=P.filter(r=>F(r,'Status')==='נשלח');
+  const sum=sent.reduce((s,r)=>s+Number(r.fields.Total||(Number(r.fields.Amount||0)*1.18)),0);
+  const openT=T.filter(r=>F(r,'Status')!=='סגורה');
+  const count=(arr,k)=>arr.reduce((m,r)=>{const v=F(r,k)||'ללא';m[v]=(m[v]||0)+1;return m},{});
+  const bars=o=>{const mx=Math.max(1,...Object.values(o));return Object.entries(o).map(([k,v])=>`<div class="bar"><label>${esc(k)}</label><div style="width:${Math.round(v/mx*220)+6}px"></div><em>${v}</em></div>`).join('')||'<p class="muted">אין נתונים</p>'};
+  const projects=[...new Set(A.map(r=>F(r,'Project')))];
+  const byProj=projects.map(p=>{const a=A.filter(r=>F(r,'Project')===p);const c=s=>a.filter(r=>F(r,'Status')===s).length;
+    return `<tr><td>${esc(p)}</td><td>${c('פנויה')}</td><td>${c('שמורה')}</td><td>${c('נמכרה')}</td><td>${a.length}</td></tr>`}).join('');
+  return `<div class="kpis">
+   <div class="kpi"><b>${L.length}</b><span>מתעניינים במערכת</span></div>
+   <div class="kpi"><b>${free.length} / ${A.length}</b><span>דירות פנויות</span></div>
+   <div class="kpi"><b>${ils(sum)}</b><span>נשלח בדרישות תשלום (כולל מע"מ)</span></div>
+   <div class="kpi"><b>${openT.length}</b><span>משימות פתוחות לנציגים</span></div></div>
+  <div class="grid2">
+   <div class="card"><h3>מלאי לפי פרויקט</h3><table><tr><th>פרויקט</th><th>פנויות</th><th>שמורות</th><th>נמכרו</th><th>סה"כ</th></tr>${byProj}</table></div>
+   <div class="card"><h3>מתעניינים לפי סטטוס</h3>${bars(count(L,'Status'))}</div>
+   <div class="card"><h3>משימות פתוחות</h3>${openT.map(r=>`<p>• ${esc(F(r,'Title'))}</p>`).join('')||'<p class="muted">אין משימות פתוחות</p>'}</div>
+   <div class="card"><h3>דרישות תשלום אחרונות</h3><table><tr><th>מס׳</th><th>רוכש</th><th>סה"כ</th><th>סטטוס</th></tr>${P.slice(-6).reverse().map(r=>`<tr><td>${esc(F(r,'RequestNumber'))}</td><td>${esc(F(r,'BuyerName'))}</td><td>${ils(r.fields.Total)}</td><td>${esc(F(r,'Status'))}</td></tr>`).join('')}</table></div>
+  </div>`}
+function tableView(t){
+  const m=meta[t];if(!m)return `<p class="muted">הטבלה ${t} לא נמצאה בבסיס.</p>`;
+  const cols=m.fields.filter(f=>f.name!=='GmailThreadId'),q=$('q').value.toLowerCase();
+  const rows=(data[t]||[]).filter(r=>Object.keys(r.fields).length).filter(r=>!q||cols.map(f=>F(r,f.name)).join(' ').toLowerCase().includes(q));
+  const td=(r,f)=>{const v=F(r,f.name);
+    if(f.name==='Status'){const c=v==='פנויה'?'free':v==='שמורה'?'res':v==='נמכרה'?'sold':'';return `<span class="chip ${c}">${esc(v)}</span>`}
+    if(['Price','Budget','Amount','VatAmount','Total'].includes(f.name))return ils(v);
+    if(f.type==='url'||f.name==='PdfUrl')return v?`<a href="${esc(v)}" target="_blank" rel="noopener">פתיחה</a>`:'';
+    return esc(v)};
+  return `<div class="card"><p class="muted">${rows.length} רשומות</p><table><tr>${cols.map(f=>`<th>${esc(he(f.name))}</th>`).join('')}<th></th></tr>
+   ${rows.map(r=>`<tr>${cols.map(f=>`<td title="${esc(F(r,f.name))}">${td(r,f)}</td>`).join('')}<td><button data-edit="${r.id}">✎</button></td></tr>`).join('')}</table></div>`}
+function render(){$('title').textContent=TITLES[view];const isT=view!=='home';$('q').hidden=!isT;$('new').hidden=!isT;
+  $('view').innerHTML=Object.keys(meta).length?(isT?tableView(view):home()):'';
+  document.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>edit(data[view].find(r=>r.id===b.dataset.edit)))}
+function edit(rec){const m=meta[view];const fs=m.fields.filter(f=>!RO.includes(f.type));
+  $('form').innerHTML=`<h3>${rec?'עריכת רשומה':'רשומה חדשה'} – ${TITLES[view]}</h3>`+fs.map(f=>`<label><span>${esc(he(f.name))}</span><input name="${esc(f.name)}" value="${esc(rec?F(rec,f.name):'')}"></label>`).join('')+`<p><button class="primary" id="save" type="button">שמירה</button> <button type="button" onclick="dlg.close()">ביטול</button></p>`;
+  $('save').onclick=async()=>{const out={};fs.forEach(f=>{const v=$('form').elements[f.name].value;if(v!==''||rec)out[f.name]=v===''?null:(['number','currency','percent'].includes(f.type)?Number(v):v)});
+    try{if(rec)await api(`/${base}/${m.id}/${rec.id}`,{method:'PATCH',body:JSON.stringify({fields:out,typecast:true})});
+      else await api(`/${base}/${m.id}`,{method:'POST',body:JSON.stringify({fields:out,typecast:true})});
+      $('dlg').close();data[view]=await all(view);render()}catch(e){$('dlg').close();show(e)}};
+  $('dlg').showModal()}
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{view=b.dataset.v;document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('on',x===b));$('q').value='';render()});
+$('connect').onclick=connect;$('q').oninput=render;$('new').onclick=()=>edit(null);
+if(pat&&base)connect();
+</script>
+</body>
+</html>

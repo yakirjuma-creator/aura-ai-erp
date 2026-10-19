@@ -1,0 +1,336 @@
+{
+  "name": "WF2 - סוכן מכירות מייל ראשון v2 (אאורה)",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## WF2 – סוכן מכירות: מייל ראשון\nכל 3 שעות: לוקח מתעניין אחד בסטטוס 'חדש' → מסנן ב-Airtable דירות **פנויות** לפי פרויקט, חדרים ותקציב (עד 10% מעל) → מודל השפה מנסח מייל אישי רק מהרשימה → שולח → מעדכן סטטוס 'נשלח מייל' + GmailThreadId.\n\nהסינון נעשה בנתונים ולא ב-AI – כך הסוכן לא יכול להציע דירה שמורה או שנמכרה.",
+        "height": 280,
+        "width": 460
+      },
+      "id": "8891e39f-9bd7-4faa-a0e7-2aff3359ae76",
+      "name": "הסבר",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -512,
+        -416
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 3
+            }
+          ]
+        }
+      },
+      "id": "3e6db591-0cce-4e59-baf7-64d5565cbfc6",
+      "name": "כל 3 שעות",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -80,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "airtableOAuth2Api",
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "appXXXXXXXXXXXXXX",
+          "mode": "list",
+          "cachedResultName": "ERP"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblXXXXXXXXXXXXXX",
+          "mode": "list",
+          "cachedResultName": "Leads"
+        },
+        "filterByFormula": "{Status}=\"חדש\"",
+        "returnAll": false,
+        "limit": 1,
+        "options": {}
+      },
+      "id": "d1dc6436-d926-4639-be21-a5d9548f8464",
+      "name": "מתעניין חדש",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        144,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "airtableOAuth2Api",
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "appXXXXXXXXXXXXXX",
+          "mode": "list",
+          "cachedResultName": "ERP"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblXXXXXXXXXXXXXX",
+          "mode": "list",
+          "cachedResultName": "Apartments"
+        },
+        "filterByFormula": "=AND({Status }=\"פנויה\", {Rooms}&\"\"=\"{{ $json.fields.Rooms }}\", {Price}<={{ Math.round($json.fields.Budget * 1.1) }}{{ $json.fields.Project && $json.fields.Project !== 'לא משנה' ? ', {Project}=\"' + $json.fields.Project + '\"' : '' }})",
+        "options": {}
+      },
+      "id": "b4221921-e544-4a78-bbf2-f219c9060075",
+      "name": "דירות פנויות מתאימות",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        -208,
+        -64
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "apartments",
+        "options": {}
+      },
+      "id": "879cf0b9-13de-4c88-a60a-df4abc2d02cc",
+      "name": "איחוד לרשימה",
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        16,
+        -64
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=פרטי המתעניין:\nשם: {{ $('מתעניין חדש').first().json.fields.Name }}\nפרויקט מבוקש: {{ $('מתעניין חדש').first().json.fields.Project }}\nמספר חדרים: {{ $('מתעניין חדש').first().json.fields.Rooms }}\nתקציב: {{ $('מתעניין חדש').first().json.fields.Budget }} ש\"ח\n\nדירות פנויות מתאימות מהמערכת:\n{{ ($json.apartments || []).filter(a => a.fields).sort((a,b) => a.fields.Price - b.fields.Price).map(a => '- דירה ' + a.fields.ApartmentId + ', ' + a.fields.Project + ', ' + a.fields.Building + ', קומה ' + a.fields.Floor + ', ' + a.fields.Rooms + ' חדרים, ' + a.fields.Size + ' מ\"ר, ' + Number(a.fields.Price).toLocaleString('he-IL') + ' ש\"ח').join('\\n') || 'אין דירות מתאימות' }}\n\nכתוב לו מייל ראשון.",
+        "messages": {
+          "messageValues": [
+            {
+              "message": "אתה נציג מכירות של אאורה ישראל, יזמית נדל\"ן למגורים. אתה כותב מייל ראשון ואישי למתעניין שהשאיר פרטים.\n\nקיבלת רשימה של דירות פנויות שכבר סוננו מהמערכת לפי הפרויקט, מספר החדרים והתקציב של המתעניין.\n1. הצע רק דירות מתוך הרשימה – עד 3, הזולות קודם. לכל דירה: מספר דירה, פרויקט, בניין, קומה, חדרים, שטח ומחיר, בדיוק כפי שהם ברשימה.\n2. אל תמציא דירות, מחירים או פרטים שלא מופיעים ברשימה.\n3. אם הרשימה ריקה – כתוב בעדינות שכרגע אין דירה פנויה שעונה בדיוק על הבקשה, והצע שיחה כדי לבחון חלופות (פרויקט אחר, מספר חדרים אחר).\n4. אל תציע הנחות ואל תתחייב לשריון.\n5. סיים בהזמנה אחת ברורה: להשיב למייל הזה עם מועד נוח לשיחה או לפגישה במשרד המכירות.\n\nסגנון: עברית תקנית, חמה ולא לוחצת, פנייה בשם הפרטי, עד 170 מילים.\nחתימה: \"בברכה,\nצוות המכירות, אאורה ישראל\"\nכתוב רק את גוף המייל, בלי שורת נושא."
+            }
+          ]
+        }
+      },
+      "id": "978b57b3-a577-4025-b401-0a0114e978e2",
+      "name": "סוכן מכירות",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.5,
+      "position": [
+        240,
+        -64
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-5.4-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-5.4-mini"
+        },
+        "options": {
+          "temperature": 0.5
+        }
+      },
+      "id": "991ca17e-2530-4d03-bc0f-245844aef78d",
+      "name": "מודל שפה",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        240,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('מתעניין חדש').first().json.fields.Email }}",
+        "subject": "={{ $('מתעניין חדש').first().json.fields.Name }}, דירות שמתאימות לך באאורה",
+        "emailType": "text",
+        "message": "={{ $json.text }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "4c90690c-8a85-4417-9f5a-15d99d7d223a",
+      "name": "שליחת מייל",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        512,
+        -64
+      ],
+      "webhookId": "4bf7703a-fc19-479a-acc8-0b88a2674847"
+    },
+    {
+      "parameters": {
+        "authentication": "airtableOAuth2Api",
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "value": "appXXXXXXXXXXXXXX",
+          "mode": "list",
+          "cachedResultName": "ERP"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblXXXXXXXXXXXXXX",
+          "mode": "list",
+          "cachedResultName": "Leads"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $('מתעניין חדש').first().json.id }}",
+            "Status": "נשלח מייל",
+            "GmailThreadId": "={{ $json.threadId }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "GmailThreadId",
+              "displayName": "GmailThreadId",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "f657e49d-49df-4cdb-a23b-88ccadb12155",
+      "name": "עדכון סטטוס",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        736,
+        -64
+      ]
+    }
+  ],
+  "connections": {
+    "כל 3 שעות": {
+      "main": [
+        [
+          {
+            "node": "מתעניין חדש",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "מתעניין חדש": {
+      "main": [
+        [
+          {
+            "node": "דירות פנויות מתאימות",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "דירות פנויות מתאימות": {
+      "main": [
+        [
+          {
+            "node": "איחוד לרשימה",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "איחוד לרשימה": {
+      "main": [
+        [
+          {
+            "node": "סוכן מכירות",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "סוכן מכירות": {
+      "main": [
+        [
+          {
+            "node": "שליחת מייל",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "מודל שפה": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "סוכן מכירות",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "שליחת מייל": {
+      "main": [
+        [
+          {
+            "node": "עדכון סטטוס",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "nodeGroups": []
+}

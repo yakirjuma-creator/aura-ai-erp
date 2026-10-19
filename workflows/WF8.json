@@ -1,0 +1,491 @@
+{
+  "name": "WF8 - סוכן מנהל (אאורה)",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## WF8 – סוכן מנהל (מייל)\nהמנהל שולח מייל עם המילים 'דוח מנהל' בנושא → n8n קורא את 4 הטבלאות ב-Airtable → מחשב סיכומים (לידים, דירות, תשלומים, משימות) בצמתים מוכנים → מודל השפה רק מנסח תשובה → נשלחת תגובה במייל.\n\n**אבטחה:** מגיב רק למיילים מכתובת המנהל (שדה Search בצומת הראשון).\n**לפני הפעלה:** לבחור את טבלת PaymentRequests בצומת 'קריאת תשלומים' אם חסרה.",
+        "height": 300,
+        "width": 480
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "02c185a9-939b-4c89-97a4-f079b48f8d2e",
+      "name": "הסבר"
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "simple": false,
+        "filters": {
+          "q": "from:MANAGER_EMAIL subject:\"דוח מנהל\"",
+          "readStatus": "unread"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        400
+      ],
+      "id": "cdb697cf-f911-4ffd-bd93-f8779cbc29e7",
+      "name": "מייל מהמנהל"
+    },
+    {
+      "parameters": {
+        "authentication": "airtableOAuth2Api",
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "appXXXXXXXXXXXXXX",
+          "mode": "list",
+          "cachedResultName": "ERP"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblXXXXXXXXXXXXXX",
+          "mode": "list",
+          "cachedResultName": "Leads"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        224,
+        400
+      ],
+      "id": "e8ff01d9-ae29-4775-ad61-5d34b3007f9a",
+      "name": "קריאת לידים",
+      "alwaysOutputData": true,
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "leads",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        432,
+        400
+      ],
+      "id": "2361e74e-a7d1-4815-a8ce-b91bbf7dcf88",
+      "name": "איחוד לידים"
+    },
+    {
+      "parameters": {
+        "authentication": "airtableOAuth2Api",
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "appXXXXXXXXXXXXXX",
+          "mode": "list",
+          "cachedResultName": "ERP"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblXXXXXXXXXXXXXX",
+          "mode": "list",
+          "cachedResultName": "Apartments"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        624,
+        400
+      ],
+      "id": "24ce75f7-071e-4104-a942-1dbe76ba56ec",
+      "name": "קריאת דירות",
+      "alwaysOutputData": true,
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "apts",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        832,
+        400
+      ],
+      "id": "d384a023-7bb8-494a-88ff-5758e61f605d",
+      "name": "איחוד דירות"
+    },
+    {
+      "parameters": {
+        "authentication": "airtableOAuth2Api",
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "appXXXXXXXXXXXXXX",
+          "mode": "list",
+          "cachedResultName": "ERP"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblXXXXXXXXXXXXXX",
+          "mode": "list",
+          "cachedResultName": "PaymentRequests"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        1024,
+        400
+      ],
+      "id": "1097e0ea-80fc-4d61-b1f1-87f3b0eb5c08",
+      "name": "קריאת תשלומים",
+      "alwaysOutputData": true,
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "pays",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        1232,
+        400
+      ],
+      "id": "e804b580-39bb-48f2-a09d-182691ed6394",
+      "name": "איחוד תשלומים"
+    },
+    {
+      "parameters": {
+        "authentication": "airtableOAuth2Api",
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "appXXXXXXXXXXXXXX",
+          "mode": "list",
+          "cachedResultName": "ERP"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblXXXXXXXXXXXXXX",
+          "mode": "list",
+          "cachedResultName": "Tasks"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        1424,
+        400
+      ],
+      "id": "33d9ad6a-00f9-4c16-940a-2fea69793a15",
+      "name": "קריאת משימות",
+      "alwaysOutputData": true,
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "tasks",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        1632,
+        400
+      ],
+      "id": "3b2f850d-54e4-4b16-a4d7-ac190906a5d0",
+      "name": "איחוד משימות"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "df32e49d-fa46-4c42-a69a-40b8b5fb2ac8",
+              "name": "leads_summary",
+              "value": "={{ (() => { const L = $('איחוד לידים').first().json.leads.filter(x => x.fields); return 'מתעניינים: ' + L.length + ' | ' + [...new Set(L.map(x => String(x.fields.Status || '').trim() || 'ללא'))].map(s => s + ': ' + L.filter(x => (String(x.fields.Status || '').trim() || 'ללא') === s).length).join(', '); })() }}",
+              "type": "string"
+            },
+            {
+              "id": "a6565197-9c72-43f2-8892-7fcd17dad6da",
+              "name": "apts_summary",
+              "value": "={{ (() => { const N = s => String(s || '').replace(/[^\\u05D0-\\u05EA]/g, ''); const F = (x, name) => { const k = Object.keys(x.fields).find(k => k.toLowerCase().includes(name)); const v = k ? x.fields[k] : ''; const w = Array.isArray(v) ? v[0] : v; return (w && w.name) || w || ''; }; const A = $('איחוד דירות').first().json.apts.filter(x => x.fields && F(x, 'apartmentid') && F(x, 'apartmentid') !== 'ApartmentId'); const S = x => N(F(x, 'status')); const st = (p, s) => A.filter(x => F(x, 'project') === p && S(x) === N(s)).length; return 'סה\"כ דירות: ' + A.length + ' | ' + [...new Set(A.map(x => F(x, 'project')))].map(p => p + ' – פנויות: ' + st(p,'פנויה') + ', שמורות: ' + st(p,'שמורה') + ', נמכרו: ' + st(p,'נמכרה')).join(' | ') + '\\nדירות פנויות: ' + A.filter(x => S(x) === N('פנויה')).map(x => F(x, 'apartmentid') + ' (' + F(x, 'project') + ', ' + F(x, 'rooms') + ' חדרים, ' + Number(F(x, 'price')).toLocaleString('he-IL') + ' ש\"ח)').join('; '); })() }}",
+              "type": "string"
+            },
+            {
+              "id": "faa9fbdf-e739-40a8-9825-e6c2a2aee6a5",
+              "name": "pays_summary",
+              "value": "={{ (() => { const P = $('איחוד תשלומים').first().json.pays.filter(x => x.fields); const sent = P.filter(x => String(x.fields.Status || '').trim() === 'נשלח'); const sum = sent.reduce((s, x) => s + Number(x.fields.Total || 0), 0); return 'דרישות תשלום: ' + P.length + ' | נשלחו: ' + sent.length + ' בסך ' + sum.toLocaleString('he-IL') + ' ש\"ח כולל מע\"מ | ממתינות להפקה: ' + P.filter(x => String(x.fields.Status || '').trim() === 'חדש').length; })() }}",
+              "type": "string"
+            },
+            {
+              "id": "970f4fdd-a8d7-4fe0-beef-e8e8d99f78ae",
+              "name": "tasks_summary",
+              "value": "={{ (() => { const T = $('איחוד משימות').first().json.tasks.filter(x => x.fields).filter(x => String(x.fields.Status || '').trim() !== 'סגורה'); return 'משימות פתוחות: ' + T.length + (T.length ? '\\n' + T.map(x => '- ' + x.fields.Title).join('\\n') : ''); })() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1824,
+        400
+      ],
+      "id": "1136b111-a9d0-4968-a187-eabf3f7243eb",
+      "name": "חישוב סיכומים"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=שאלת המנהל (נושא: {{ $('מייל מהמנהל').first().json.subject }}):\n{{ $('מייל מהמנהל').first().json.text }}\n\nנתוני המערכת (נכון לרגע זה):\n{{ $json.leads_summary }}\n{{ $json.apts_summary }}\n{{ $json.pays_summary }}\n{{ $json.tasks_summary }}",
+        "messages": {
+          "messageValues": [
+            {
+              "message": "אתה העוזר האנליטי של מנהל המכירות באאורה ישראל. המנהל שולח שאלה במייל, ואתה עונה במייל קצר בעברית.\n\nכללים:\n1. ענה רק על סמך \"נתוני המערכת\" שקיבלת. המספרים כבר חושבו מראש – אל תחשב מחדש ואל תמציא נתונים.\n2. אם אין בנתונים תשובה לשאלה – כתוב זאת בפשטות.\n3. פתח במשפט אחד עם התשובה הישירה, ואחריו פירוט קצר (עד 120 מילים). סכומים בפורמט ₪.\n4. אם יש משימות פתוחות או דרישות ממתינות – ציין זאת בשורה אחת בסוף.\nחתימה: \"העוזר האנליטי, AI-ERP אאורה\""
+            }
+          ]
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.5,
+      "position": [
+        2032,
+        400
+      ],
+      "id": "7d004522-4ecb-4d0b-b4b7-d11ff836b98f",
+      "name": "סוכן מנהל"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-5.4-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-5.4-mini"
+        },
+        "options": {
+          "temperature": 0.5
+        }
+      },
+      "id": "20cb172e-3dcd-4de4-a2d6-37b4493f6fa9",
+      "name": "מודל שפה",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        2032,
+        624
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "reply",
+        "messageId": "={{ $('מייל מהמנהל').first().json.id }}",
+        "emailType": "text",
+        "message": "={{ $json.text }}",
+        "options": {
+          "appendAttribution": false,
+          "replyToSenderOnly": true
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        2272,
+        400
+      ],
+      "id": "33389df1-99c9-4333-81dd-5e677706b214",
+      "name": "תשובה למנהל",
+      "webhookId": "e95accb3-c23a-440d-8a2c-0da768d0bdd9"
+    },
+    {
+      "parameters": {
+        "operation": "markAsRead",
+        "messageId": "={{ $('מייל מהמנהל').first().json.id }}"
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        2480,
+        400
+      ],
+      "id": "2ede274c-b935-4297-acf1-c20c731f448a",
+      "name": "סימון כנקרא",
+      "webhookId": "d2898947-cbf7-4825-8528-77597be8acc4"
+    }
+  ],
+  "connections": {
+    "מייל מהמנהל": {
+      "main": [
+        [
+          {
+            "node": "קריאת לידים",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "קריאת לידים": {
+      "main": [
+        [
+          {
+            "node": "איחוד לידים",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "איחוד לידים": {
+      "main": [
+        [
+          {
+            "node": "קריאת דירות",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "קריאת דירות": {
+      "main": [
+        [
+          {
+            "node": "איחוד דירות",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "איחוד דירות": {
+      "main": [
+        [
+          {
+            "node": "קריאת תשלומים",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "קריאת תשלומים": {
+      "main": [
+        [
+          {
+            "node": "איחוד תשלומים",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "איחוד תשלומים": {
+      "main": [
+        [
+          {
+            "node": "קריאת משימות",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "קריאת משימות": {
+      "main": [
+        [
+          {
+            "node": "איחוד משימות",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "איחוד משימות": {
+      "main": [
+        [
+          {
+            "node": "חישוב סיכומים",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "חישוב סיכומים": {
+      "main": [
+        [
+          {
+            "node": "סוכן מנהל",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "סוכן מנהל": {
+      "main": [
+        [
+          {
+            "node": "תשובה למנהל",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "תשובה למנהל": {
+      "main": [
+        [
+          {
+            "node": "סימון כנקרא",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "מודל שפה": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "סוכן מנהל",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "nodeGroups": []
+}

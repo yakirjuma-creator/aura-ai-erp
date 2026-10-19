@@ -1,0 +1,339 @@
+{
+  "name": "WF1 - קליטת מתעניינים (אאורה)",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## WF1 – קליטת מתעניין חדש\nטופס באתר → בדיקה אם המייל כבר קיים ב-Leads → אם לא, יוצרים רשומה חדשה עם סטטוס 'חדש'.\n\n**לפני הרצה:** בשני צמתי ה-Airtable בחרו את ה-credential, את הבסיס ואת הטבלה Leads.",
+        "height": 220,
+        "width": 420
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "2363f3e9-e6d2-4a9d-a199-79acb4acb3ac",
+      "name": "הסבר"
+    },
+    {
+      "parameters": {
+        "formTitle": "אאורה – השארת פרטים",
+        "formDescription": "השאירו פרטים ונחזור אליכם עם דירות שמתאימות לכם",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "שם מלא",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "אימייל",
+              "fieldType": "email",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "טלפון",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "פרויקט",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "אאורה סיטי"
+                  },
+                  {
+                    "option": "מכבי חדרה"
+                  },
+                  {
+                    "option": "לא משנה"
+                  }
+                ]
+              }
+            },
+            {
+              "fieldLabel": "מספר חדרים",
+              "fieldType": "number"
+            },
+            {
+              "fieldLabel": "תקציב",
+              "fieldType": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        288
+      ],
+      "id": "a7b8463c-7199-496c-9ab4-f537e11cd176",
+      "name": "טופס מתעניין",
+      "webhookId": "089c7e2d-e06f-460d-a516-fdc14e9ddf8e"
+    },
+    {
+      "parameters": {
+        "authentication": "airtableOAuth2Api",
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "appXXXXXXXXXXXXXX",
+          "mode": "list",
+          "cachedResultName": "ERP"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblXXXXXXXXXXXXXX",
+          "mode": "list",
+          "cachedResultName": "Leads"
+        },
+        "filterByFormula": "={Email}=\"{{ $json['אימייל'] }}\"",
+        "returnAll": false,
+        "limit": 1,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        272,
+        288
+      ],
+      "id": "4822c3e2-2b03-4498-8eac-4bed72491d0b",
+      "name": "חיפוש מייל קיים",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "61d7ccab-3f60-4f46-9fb0-fcf71358ed40",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notExists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        528,
+        288
+      ],
+      "id": "d3f8daba-4648-4f5f-bc7d-ccd1bae30f75",
+      "name": "מתעניין חדש?"
+    },
+    {
+      "parameters": {
+        "authentication": "airtableOAuth2Api",
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "value": "appXXXXXXXXXXXXXX",
+          "mode": "list",
+          "cachedResultName": "ERP"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblXXXXXXXXXXXXXX",
+          "mode": "list",
+          "cachedResultName": "Leads"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Name": "={{ $('טופס מתעניין').item.json['שם מלא'] }}",
+            "Email": "={{ $('טופס מתעניין').item.json['אימייל'] }}",
+            "Phone": "={{ $('טופס מתעניין').item.json['טלפון'] }}",
+            "Project": "={{ $('טופס מתעניין').item.json['פרויקט'] }}",
+            "Rooms": "={{ $('טופס מתעניין').item.json['מספר חדרים'] }}",
+            "Budget": "={{ $('טופס מתעניין').item.json['תקציב'] }}",
+            "Status": "={{ $('טופס מתעניין').item.json.formMode }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Phone",
+              "displayName": "Phone",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Project",
+              "displayName": "Project",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Rooms",
+              "displayName": "Rooms",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Budget",
+              "displayName": "Budget",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Created",
+              "displayName": "Created",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": true,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "typecast": true
+        }
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        784,
+        192
+      ],
+      "id": "f5bb6db8-3f6a-4aa4-a352-07e35d90c0a7",
+      "name": "יצירת מתעניין"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        784,
+        384
+      ],
+      "id": "b5a16a5c-6e68-4c36-9659-4fda27a6c446",
+      "name": "כפול – לא נוסף"
+    }
+  ],
+  "connections": {
+    "טופס מתעניין": {
+      "main": [
+        [
+          {
+            "node": "חיפוש מייל קיים",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "חיפוש מייל קיים": {
+      "main": [
+        [
+          {
+            "node": "מתעניין חדש?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "מתעניין חדש?": {
+      "main": [
+        [
+          {
+            "node": "יצירת מתעניין",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "כפול – לא נוסף",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "nodeGroups": []
+}

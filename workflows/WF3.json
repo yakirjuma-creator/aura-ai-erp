@@ -1,0 +1,345 @@
+{
+  "name": "WF3 - סוכן מכירות בדיקת תשובות (אאורה)",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## WF3 – סוכן מכירות: בדיקת תשובות\nכל 30 דקות: עובר על מיילים שלא נקראו. אם המייל שייך לשרשרת של מתעניין (לפי GmailThreadId) – מעדכן סטטוס ל'ענה', פותח משימה לנציג ומסמן כנקרא.\nמיילים אחרים לא נוגעים בהם.\n\n**לפני הפעלה:** Gmail בשלושת הצמתים, Airtable בשלושת הצמתים (Leads / Tasks), ובשדה Search להחליף YOUR_EMAIL.",
+        "height": 280,
+        "width": 460
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "ced7dcbd-a7a4-45c5-8c8c-667274b3192d",
+      "name": "הסבר"
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyX",
+              "value": 30,
+              "unit": "minutes"
+            }
+          ]
+        },
+        "simple": false,
+        "filters": {
+          "q": "in:inbox -to:YOUR_GMAIL+service@gmail.com",
+          "readStatus": "unread"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        368
+      ],
+      "id": "6535a5de-84ef-4018-b10f-b629a989751e",
+      "name": "מייל נכנס"
+    },
+    {
+      "parameters": {
+        "authentication": "airtableOAuth2Api",
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "appXXXXXXXXXXXXXX",
+          "mode": "list",
+          "cachedResultName": "ERP"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblXXXXXXXXXXXXXX",
+          "mode": "list",
+          "cachedResultName": "Leads"
+        },
+        "filterByFormula": "={GmailThreadId}=\"{{ $json.threadId }}\"",
+        "returnAll": false,
+        "limit": 1,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        224,
+        368
+      ],
+      "id": "05b20871-b083-4893-853c-a5c5923d21bf",
+      "name": "חיפוש מתעניין",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "d294196d-9f9c-497b-a090-25349837cd76",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        448,
+        368
+      ],
+      "id": "47c89a18-e3f2-4454-af68-fd46a4d92caf",
+      "name": "זה מתעניין?"
+    },
+    {
+      "parameters": {
+        "authentication": "airtableOAuth2Api",
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "value": "appXXXXXXXXXXXXXX",
+          "mode": "list",
+          "cachedResultName": "ERP"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblXXXXXXXXXXXXXX",
+          "mode": "list",
+          "cachedResultName": "Leads"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $json.id }}",
+            "Status": "ענה"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        672,
+        240
+      ],
+      "id": "e214b89c-ec1f-4688-a585-495f70c4085f",
+      "name": "סטטוס: ענה"
+    },
+    {
+      "parameters": {
+        "authentication": "airtableOAuth2Api",
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "value": "appXXXXXXXXXXXXXX",
+          "mode": "list",
+          "cachedResultName": "ERP"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblXXXXXXXXXXXXXX",
+          "mode": "list",
+          "cachedResultName": "Tasks"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Title": "=לחזור למתעניין {{ $json.fields.Name }} ({{ $json.fields.Phone }}) – ענה למייל: {{ $('מייל נכנס').first().json.text.slice(0, 150) }}",
+            "Status": "פתוחה",
+            "RelatedTo": "={{ $json.fields.Email }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Title",
+              "displayName": "Title",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "RelatedTo",
+              "displayName": "RelatedTo",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        880,
+        240
+      ],
+      "id": "c58013db-e781-4df5-b257-bbcd1eec5251",
+      "name": "משימה לנציג"
+    },
+    {
+      "parameters": {
+        "operation": "markAsRead",
+        "messageId": "={{ $('מייל נכנס').item.json.id }}"
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1104,
+        240
+      ],
+      "id": "3e3037f1-097d-47ed-8915-274a990f12ba",
+      "name": "סימון כנקרא",
+      "webhookId": "b1c66fe7-f4c5-4149-b715-1aae9a01d4a0"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        672,
+        480
+      ],
+      "id": "8fcc2b28-bdb1-432d-8149-9816f5c96ac9",
+      "name": "לא מתעניין – לא נוגעים"
+    }
+  ],
+  "connections": {
+    "מייל נכנס": {
+      "main": [
+        [
+          {
+            "node": "חיפוש מתעניין",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "חיפוש מתעניין": {
+      "main": [
+        [
+          {
+            "node": "זה מתעניין?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "זה מתעניין?": {
+      "main": [
+        [
+          {
+            "node": "סטטוס: ענה",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "לא מתעניין – לא נוגעים",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "סטטוס: ענה": {
+      "main": [
+        [
+          {
+            "node": "משימה לנציג",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "משימה לנציג": {
+      "main": [
+        [
+          {
+            "node": "סימון כנקרא",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "nodeGroups": []
+}
